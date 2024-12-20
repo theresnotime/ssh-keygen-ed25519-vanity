@@ -1,6 +1,6 @@
 [package]
 name = "ssh-keygen-ed25519-vanity"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,6 +11,7 @@ regex = "1.5.4"
 base64 = "0.22.1"
 bytebuffer = "2.0.1"
 ed25519-dalek = "1.0.1"
+clap = { version = "4.5.23", features = ["derive"] }
 
 [[bin]]
 name = "vanity"
