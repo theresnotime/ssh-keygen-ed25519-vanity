@@ -13,7 +13,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use rand::rngs::OsRng;
 use regex::Regex;
-use base64::encode;
+use base64::encode; // TODO: deprecated
 use bytebuffer::{ByteBuffer, Endian::BigEndian};
 use ed25519_dalek::{Keypair, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 
@@ -47,8 +47,8 @@ fn get_sk(pk: &[u8], keypair: Keypair) -> String {
   }
 
   buffer.write_u32(sk.len() as u32);
-  buffer.write_bytes(&sk.to_bytes());
-  return encode(buffer.to_bytes());
+  buffer.write_bytes(&sk.into_bytes()); // TODO: deprecated
+  return encode(buffer.into_bytes()); // TODO: deprecated
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -65,25 +65,34 @@ fn main() -> Result<(), Box<dyn Error>> {
   loop {
     let keypair = Keypair::generate(&mut csprng);
     buffer.write_bytes(&keypair.public.to_bytes());
-    let pk = buffer.to_bytes();
-    let pk64 = encode(&pk);
+    let pk = buffer.into_bytes(); // TODO: deprecated
+    let pk64 = encode(&pk); // TODO: deprecated
     if regex.is_match(&pk64) {
       println!("ssh-ed25519 {}", pk64);
       let sk64 = get_sk(&pk, keypair);
       match path {
         Some(path) => {
-          let mut file = File::create(path)?;
+          let mut file = File::create(path.clone())?;
+          let mut file_pub = File::create(path.clone() + ".pub")?;
           if cfg!(unix) {
             file.set_permissions(Permissions::from_mode(0o600))?;
           }
           writeln!(file, "-----BEGIN OPENSSH PRIVATE KEY-----")?;
           writeln!(file, "{}", sk64)?;
           writeln!(file, "-----END OPENSSH PRIVATE KEY-----")?;
+          // This makes sense, right?
+          writeln!(file_pub, "-----BEGIN OPENSSH PUBLIC KEY-----")?;
+          writeln!(file_pub, "{}", pk64)?;
+          writeln!(file_pub, "-----END OPENSSH PUBLIC KEY-----")?;
         }
         None => {
           println!("-----BEGIN OPENSSH PRIVATE KEY-----");
           println!("{}", sk64);
           println!("-----END OPENSSH PRIVATE KEY-----");
+          // This makes sense, right?
+          println!("-----BEGIN OPENSSH PUBLIC KEY-----");
+          println!("{}", pk64);
+          println!("-----END OPENSSH PUBLIC KEY-----");
         }
       }
       break Ok(());

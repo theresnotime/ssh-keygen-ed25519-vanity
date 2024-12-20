@@ -1,3 +1,4 @@
 vanity
-/target
+target/
 Cargo.lock
+out/
