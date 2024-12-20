@@ -37,6 +37,10 @@ struct Args {
     /// Verbose mode
     #[arg(short, long, default_value = "false")]
     verbose: bool,
+
+    /// Yes to all prompts
+    #[arg(short, long, default_value = "false")]
+    yes: bool,
 }
 
 fn get_sk(pk: &[u8], keypair: Keypair) -> String {
@@ -81,7 +85,7 @@ fn prompt_keep_looking() -> bool {
   return input.trim().to_lowercase() == "y";
 }
 
-fn run(pattern: String, path: String, verbose: bool) -> Result<(String, String), Box<dyn Error>> {
+fn run(pattern: String, path: String, verbose: bool, yes: bool) -> Result<(String, String), Box<dyn Error>> {
   // Check that pattern is only alphanumeric
   if (pattern.chars().all(char::is_alphanumeric)) == false {
     return Err("Pattern must be alphanumeric".into());
@@ -110,9 +114,12 @@ fn run(pattern: String, path: String, verbose: bool) -> Result<(String, String),
     }
     if regex.is_match(&pk64) {
       println!("Found: ssh-ed25519 {}", pk64);
-      if prompt_keep_looking() {
-        buffer.set_wpos(buffer.get_wpos() - PUBLIC_KEY_LENGTH);
-        continue;
+      println!("{}", yes);
+      if yes == false {
+        if prompt_keep_looking() {
+          buffer.set_wpos(buffer.get_wpos() - PUBLIC_KEY_LENGTH);
+          continue;
+        }
       }
       let sk64 = get_sk(&pk, keypair);
       if path.is_empty() {
@@ -148,6 +155,7 @@ fn run(pattern: String, path: String, verbose: bool) -> Result<(String, String),
 fn main() -> std::process::ExitCode {
   let args = Args::parse();
   let verbose = args.verbose;
+  let yes = args.yes;
   let pattern = args.pattern;
   let path = args.out;
   let start = std::time::Instant::now();
@@ -157,7 +165,7 @@ fn main() -> std::process::ExitCode {
     println!("Out path: {}", path);
     println!("Start time: {:?}", start);
   }
-  let result = run(pattern, path, verbose);
+  let result = run(pattern, path, verbose, yes);
   let end = start.elapsed();
   match result {
     Ok(returns  ) => {
@@ -180,7 +188,7 @@ mod tests {
       let pattern = "aa";
       let path = "";
       let verbose = true;
-      let result = run(pattern.to_string(), path.to_string(), verbose).unwrap();
+      let result = run(pattern.to_string(), path.to_string(), verbose, true).unwrap();
       let (returned_pattern, returned_key) = result;
       assert_eq!(returned_pattern, pattern);
       assert_eq!(returned_key.contains(pattern), true);
@@ -191,7 +199,7 @@ mod tests {
       let pattern = "**(0";
       let path = "";
       let verbose = true;
-      let result = run(pattern.to_string(), path.to_string(), verbose);
+      let result = run(pattern.to_string(), path.to_string(), verbose, true);
       assert_eq!(result.unwrap_err().to_string(), "Pattern must be alphanumeric");
     }
 }
